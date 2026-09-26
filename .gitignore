@@ -1,0 +1,20 @@
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+/analyzer/bin/
+/api/bin/
+/realtime/bin/
+
+# Node
+node_modules/
+web/dist/
+web/.env
+
+# Env/secrets
+.env
+*.local
+
+# OS
+.DS_Store
