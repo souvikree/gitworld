@@ -1,0 +1,31 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  go-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [analyzer, api, realtime]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: cd ${{ matrix.service }} && go build ./...
+      - name: Vet
+        run: cd ${{ matrix.service }} && go vet ./...
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Vulnerability scan
+        run: cd ${{ matrix.service }} && $(go env GOPATH)/bin/govulncheck ./...
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd web && npm ci && npm run build
+      - run: cd web && npm audit --audit-level=high
