@@ -1,9 +1,11 @@
 package walker_test
 
 import (
+	"strings"
 	"testing"
 
 	"go.uber.org/zap"
+
 	"github.com/souvikree/gitworld/analyzer/internal/walker"
 )
 
@@ -14,7 +16,7 @@ func TestWalk_SkipsNodeModulesAndGit(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	for _, f := range res.Files {
-		if contains(f, "node_modules") || contains(f, ".git") {
+		if strings.Contains(f, "node_modules") || strings.Contains(f, ".git") {
 			t.Errorf("walker should have skipped %s", f)
 		}
 	}

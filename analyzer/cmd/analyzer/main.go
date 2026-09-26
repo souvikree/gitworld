@@ -7,12 +7,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/<you>/codeworld/analyzer/internal/config"
-	"github.com/<you>/codeworld/analyzer/internal/extract"
-	"github.com/<you>/codeworld/analyzer/internal/graph"
-	"github.com/<you>/codeworld/analyzer/internal/logger"
-	"github.com/<you>/codeworld/analyzer/internal/parser"
-	"github.com/<you>/codeworld/analyzer/internal/walker"
+	"go.uber.org/zap"
+
+	"github.com/souvikree/gitworld/analyzer/internal/config"
+	"github.com/souvikree/gitworld/analyzer/internal/extract"
+	"github.com/souvikree/gitworld/analyzer/internal/graph"
+	"github.com/souvikree/gitworld/analyzer/internal/logger"
+	"github.com/souvikree/gitworld/analyzer/internal/parser"
+	"github.com/souvikree/gitworld/analyzer/internal/resolve"
+	"github.com/souvikree/gitworld/analyzer/internal/store"
+	"github.com/souvikree/gitworld/analyzer/internal/walker"
 )
 
 func main() {
@@ -26,57 +30,72 @@ func run() error {
 	path := flag.String("path", ".", "repo path to analyze")
 	flag.Parse()
 
-	// Config load is here mainly for LOG_LEVEL; DB config unused by CLI yet.
 	cfg, err := config.Load()
 	if err != nil {
-		// CLI mode doesn't need Neo4j creds — degrade gracefully, don't crash.
 		cfg = &config.Config{LogLevel: "info"}
 	}
 
+	
 	log, err := logger.New(cfg.LogLevel)
 	if err != nil {
 		return fmt.Errorf("logger init: %w", err)
 	}
 	defer log.Sync()
+	
+	ctx := context.Background()
 
+	neo4jStore, err := store.NewNeo4jStore(ctx, cfg.Neo4jURI, cfg.Neo4jUser, cfg.Neo4jPassword, log)
+	if err != nil {
+		return fmt.Errorf("neo4j connect: %w", err)
+	}
+	defer neo4jStore.Close(ctx)
+
+	if err := neo4jStore.EnsureSchema(ctx); err != nil {
+		return fmt.Errorf("schema setup: %w", err)
+	}
+	
 	res, err := walker.Walk(*path, log)
 	if err != nil {
 		return fmt.Errorf("walk failed: %w", err)
 	}
 
-	ctx := context.Background()
+	// ctx := context.Background()
 	full := graph.Graph{}
 	var parseFailures int
 
 	for _, f := range res.Files {
 		ast, err := parser.ParseFile(ctx, f)
 		if err != nil && ast == nil {
-			// hard failure, no usable tree at all
 			parseFailures++
-			log.Warn("parse failed", zapErr("path", f), zapErr("error", err))
+			log.Warn("parse failed", zap.String("path", f), zap.Error(err))
 			continue
 		}
 		if err != nil {
-			// partial tree with syntax errors — still counted, still logged
 			parseFailures++
-			log.Warn("parsed with errors", zapErr("path", f), zapErr("error", err))
+			log.Warn("parsed with errors", zap.String("path", f), zap.Error(err))
 		}
 
 		g, err := extract.FromAST(ast)
 		if err != nil {
 			parseFailures++
-			log.Warn("extract failed", zapErr("path", f), zapErr("error", err))
+			log.Warn("extract failed", zap.String("path", f), zap.Error(err))
 			continue
 		}
 		full.Nodes = append(full.Nodes, g.Nodes...)
 		full.Edges = append(full.Edges, g.Edges...)
 	}
 
+	resolve.Resolve(&full)
+
+	if err := neo4jStore.IngestGraph(ctx, &full); err != nil {
+		return fmt.Errorf("ingestion: %w", err)
+	}
+
 	log.Info("analysis complete",
-		zapInt("files_walked", len(res.Files)),
-		zapInt("parse_failures", parseFailures),
-		zapInt("nodes", len(full.Nodes)),
-		zapInt("edges", len(full.Edges)),
+		zap.Int("files_walked", len(res.Files)),
+		zap.Int("parse_failures", parseFailures),
+		zap.Int("nodes", len(full.Nodes)),
+		zap.Int("edges", len(full.Edges)),
 	)
 
 	out, err := json.MarshalIndent(full, "", "  ")

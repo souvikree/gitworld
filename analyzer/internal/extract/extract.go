@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 
 	sitter "github.com/smacker/go-tree-sitter"
-	"github.com/<you>/codeworld/analyzer/internal/graph"
-	"github.com/<you>/codeworld/analyzer/internal/parser"
+	"github.com/souvikree/gitworld/analyzer/internal/graph"
+	"github.com/souvikree/gitworld/analyzer/internal/parser"
 )
 
 // FromAST walks a parsed file's tree and produces graph nodes/edges.
