@@ -84,5 +84,12 @@ export async function fetchGraph(repoId: string, signal?: AbortSignal): Promise<
     throw new GraphFetchError("API response missing expected graph shape");
   }
 
-  return data as Graph;
+  const raw = data as { nodes: unknown; edges: unknown };
+
+  // Normalize: never let a null nodes/edges field (e.g. an empty Go
+  // slice serialized as JSON null) leak into a component as null.
+  return {
+    nodes: Array.isArray(raw.nodes) ? (raw.nodes as GraphNode[]) : [],
+    edges: Array.isArray(raw.edges) ? (raw.edges as GraphEdge[]) : [],
+  };
 }

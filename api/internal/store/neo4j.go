@@ -74,7 +74,7 @@ func (s *Neo4jStore) GetGraph(ctx context.Context, repoID string, limit int) (*G
 			return nil, err
 		}
 
-		g := &Graph{}
+		g := &Graph{Nodes: []Node{}, Edges: []Edge{}}
 		seen := make(map[string]bool)
 
 		for res.Next(ctxTimeout) {

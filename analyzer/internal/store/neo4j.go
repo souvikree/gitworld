@@ -35,8 +35,6 @@ func NewNeo4jStore(ctx context.Context, uri, user, password string, log *zap.Log
 	return &Neo4jStore{driver: driver, log: log}, nil
 }
 
-
-
 // IngestGraph upserts every node and edge. Idempotent — running the same
 // graph twice produces the same end state, not duplicates.
 func (s *Neo4jStore) IngestGraph(ctx context.Context, g *graph.Graph) error {
@@ -45,14 +43,15 @@ func (s *Neo4jStore) IngestGraph(ctx context.Context, g *graph.Graph) error {
 
 	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		for _, n := range g.Nodes {
-			label := string(n.Type) // "File" or "Module" — matches constraint labels
+			label := string(n.Type)
 			query := fmt.Sprintf(
-				"MERGE (x:%s {id: $id}) SET x.path = $path, x.name = $name", label,
+				"MERGE (x:%s {id: $id}) SET x.path = $path, x.name = $name, x.repoId = $repoId", label,
 			)
 			if _, err := tx.Run(ctx, query, map[string]any{
-				"id":   n.ID,
-				"path": n.Path,
-				"name": n.Name,
+				"id":     n.ID,
+				"path":   n.Path,
+				"name":   n.Name,
+				"repoId": n.RepoID,
 			}); err != nil {
 				return nil, fmt.Errorf("upsert node %s: %w", n.ID, err)
 			}

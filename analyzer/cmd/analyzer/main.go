@@ -28,14 +28,13 @@ func main() {
 
 func run() error {
 	path := flag.String("path", ".", "repo path to analyze")
-	flag.Parse()
-
 	repoID := flag.String("repo-id", "", "unique identifier for this repo (required for multi-tenant ingestion)")
 	flag.Parse()
 
 	if *repoID == "" {
 		return fmt.Errorf("-repo-id is required")
 	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		cfg = &config.Config{LogLevel: "info"}
