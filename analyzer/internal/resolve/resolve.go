@@ -41,6 +41,7 @@ func Resolve(g *graph.Graph) {
 
 		// Bare specifier: npm package or node: builtin — not a file we walked.
 		id, exists := externalSeen[e.To]
+		fromNode := findNode(g.Nodes, e.From)
 		if !exists {
 			id = "external:" + e.To
 			externalSeen[e.To] = id
@@ -48,6 +49,7 @@ func Resolve(g *graph.Graph) {
 				ID:   id,
 				Type: graph.NodeModule,
 				Name: e.To,
+				RepoID: fromNode.RepoID,
 			})
 		}
 		g.Edges[i].To = id

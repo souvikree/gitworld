@@ -13,11 +13,11 @@ import (
 // This is intentionally minimal for the first pass: file node + import edges.
 // Function/class extraction and call-graph edges are added incrementally
 // once this base case has fixture coverage.
-func FromAST(f *parser.FileAST) (graph.Graph, error) {
-	fileID := nodeID(f.Path)
+func FromAST(f *parser.FileAST, repoID string) (graph.Graph, error) {
+	fileID := nodeID(repoID, f.Path)
 	g := graph.Graph{
 		Nodes: []graph.Node{
-			{ID: fileID, Type: graph.NodeFile, Path: f.Path, Name: f.Path},
+			{ID: fileID, Type: graph.NodeFile, Path: f.Path, Name: f.Path, RepoID: repoID},
 		},
 	}
 
@@ -55,7 +55,7 @@ func trimQuotes(s string) string {
 	return s
 }
 
-func nodeID(path string) string {
-	sum := sha1.Sum([]byte(path))
+func nodeID(repoID, path string) string {
+	sum := sha1.Sum([]byte(repoID + ":" + path))
 	return hex.EncodeToString(sum[:])
 }

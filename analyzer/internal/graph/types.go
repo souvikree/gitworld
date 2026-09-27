@@ -13,6 +13,7 @@ type Node struct {
 	Type     NodeType       `json:"type"`
 	Path     string         `json:"path"`
 	Name     string         `json:"name"`
+	RepoID   string         `json:"repoId"`
 	Metadata map[string]any `json:"metadata,omitempty"`
 }
 

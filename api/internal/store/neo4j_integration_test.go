@@ -40,7 +40,7 @@ func TestGetGraph_ReturnsSeededData(t *testing.T) {
 		t.Fatalf("seed failed: %v", err)
 	}
 
-	g, err := s.GetGraph(ctx, 100)
+	g, err := s.GetGraph(ctx, "test-repo", 100)
 	if err != nil {
 		t.Fatalf("GetGraph failed: %v", err)
 	}

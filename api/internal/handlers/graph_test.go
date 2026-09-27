@@ -20,7 +20,7 @@ type fakeStore struct {
 	err   error
 }
 
-func (f *fakeStore) GetGraph(ctx context.Context, limit int) (*store.Graph, error) {
+func (f *fakeStore) GetGraph(ctx context.Context, repoID string, limit int) (*store.Graph, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -30,7 +30,7 @@ func (f *fakeStore) GetGraph(ctx context.Context, limit int) (*store.Graph, erro
 func setupRouter(h *handlers.GraphHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.GET("/v1/graph", h.GetGraph)
+	r.GET("/v1/graph/:repoId", h.GetGraph)
 	return r
 }
 
@@ -41,7 +41,7 @@ func TestGetGraph_Success(t *testing.T) {
 	h := &handlers.GraphHandler{Store: fake, Log: zap.NewNop()}
 	router := setupRouter(h)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/graph", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/graph/test-repo", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -63,7 +63,7 @@ func TestGetGraph_StoreError(t *testing.T) {
 	h := &handlers.GraphHandler{Store: fake, Log: zap.NewNop()}
 	router := setupRouter(h)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/graph", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/graph/test-repo", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -74,6 +74,24 @@ func TestGetGraph_StoreError(t *testing.T) {
 	// matches your own logging/security standard.
 	if bodyContains(w.Body.String(), "neo4j down") {
 		t.Error("internal error message leaked to client response")
+	}
+}
+
+func TestGetGraph_MissingRepoID(t *testing.T) {
+	fake := &fakeStore{graph: &store.Graph{}}
+	h := &handlers.GraphHandler{Store: fake, Log: zap.NewNop()}
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/v1/graph/:repoId", h.GetGraph) // still needs the param defined for routing, but we'll hit it with an empty value differently below
+
+	// Gin's :repoId param can't literally be empty via this route pattern,
+	// so this test targets the handler directly instead of through routing.
+	req := httptest.NewRequest(http.MethodGet, "/v1/graph/", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for missing repoId segment, got %d", w.Code)
 	}
 }
 

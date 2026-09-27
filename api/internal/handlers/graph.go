@@ -17,12 +17,18 @@ type GraphHandler struct {
 }
 
 func (h *GraphHandler) GetGraph(c *gin.Context) {
+	repoID := c.Param("repoId")
+	if repoID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "repoId is required"})
+		return
+	}
+
 	reqCtx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	g, err := h.Store.GetGraph(reqCtx, 500)
+	g, err := h.Store.GetGraph(reqCtx, repoID, 500)
 	if err != nil {
-		h.Log.Error("get graph failed", zap.Error(err))
+		h.Log.Error("get graph failed", zap.Error(err), zap.String("repoId", repoID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch graph"})
 		return
 	}

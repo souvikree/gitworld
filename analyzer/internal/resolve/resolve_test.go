@@ -22,7 +22,7 @@ func TestResolve_RelativeImportMatchesRealNode(t *testing.T) {
 	full := graph.Graph{}
 	for _, f := range res.Files {
 		ast, _ := parser.ParseFile(context.Background(), f)
-		g, err := extract.FromAST(ast)
+		g, err := extract.FromAST(ast, "test-repo")
 		if err != nil {
 			t.Fatalf("extract failed: %v", err)
 		}

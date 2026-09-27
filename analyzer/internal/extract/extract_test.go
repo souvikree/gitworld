@@ -15,7 +15,7 @@ func TestFromAST_SimpleImport(t *testing.T) {
 		t.Fatalf("parse failed: %v", err)
 	}
 
-	g, err := extract.FromAST(ast)
+	g, err := extract.FromAST(ast, "test-repo")
 	if err != nil {
 		t.Fatalf("extract failed: %v", err)
 	}

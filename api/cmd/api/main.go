@@ -65,7 +65,8 @@ func run() error {
 	protected.Use(middleware.RateLimit(5, 10))
 
 	graphHandler := &handlers.GraphHandler{Store: neo4jStore, Log: log}
-	protected.GET("/graph", graphHandler.GetGraph)
+	// protected.GET("/graph", graphHandler.GetGraph)
+	protected.GET("/graph/:repoId", graphHandler.GetGraph)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

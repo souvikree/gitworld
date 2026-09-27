@@ -51,7 +51,11 @@ func NewNeo4jStore(ctx context.Context, uri, user, password string, log *zap.Log
 
 // GetGraph fetches the full graph. Bounded by limit to avoid an
 // accidental full-database dump on a large real-world repo.
-func (s *Neo4jStore) GetGraph(ctx context.Context, limit int) (*Graph, error) {
+func (s *Neo4jStore) GetGraph(ctx context.Context, repoID string, limit int) (*Graph, error) {
+	if repoID == "" {
+		return nil, fmt.Errorf("store: repoID is required")
+	}
+
 	ctxTimeout, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -60,11 +64,11 @@ func (s *Neo4jStore) GetGraph(ctx context.Context, limit int) (*Graph, error) {
 
 	result, err := session.ExecuteRead(ctxTimeout, func(tx neo4j.ManagedTransaction) (any, error) {
 		res, err := tx.Run(ctxTimeout,
-			`MATCH (n)
-			 OPTIONAL MATCH (n)-[r]->(m)
+			`MATCH (n {repoId: $repoID})
+			 OPTIONAL MATCH (n)-[r]->(m {repoId: $repoID})
 			 RETURN n, r, m, n.id AS fromID, m.id AS toID
 			 LIMIT $limit`,
-			map[string]any{"limit": limit},
+			map[string]any{"repoID": repoID, "limit": limit},
 		)
 		if err != nil {
 			return nil, err
